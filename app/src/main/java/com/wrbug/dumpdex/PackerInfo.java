@@ -53,6 +53,11 @@ public class PackerInfo {
      */
     private static final String[] BAI_DU = {"com.baidu.protect.StubApplication"};
 
+    /**
+     * 易盾加固
+     */
+    private static final String[] NETEASE = {"com.netease.nis.wrapper.MyApplication"};
+
 
     static {
         sPackageName.addAll(Arrays.asList(QI_HOO));
@@ -60,6 +65,7 @@ public class PackerInfo {
         sPackageName.addAll(Arrays.asList(BANG_BANG));
         sPackageName.addAll(Arrays.asList(TENCENT));
         sPackageName.addAll(Arrays.asList(BAI_DU));
+        sPackageName.addAll(Arrays.asList(NETEASE));
 
         for (String s : QI_HOO) {
             sTypeMap.put(s, Type.QI_HOO);
@@ -75,6 +81,10 @@ public class PackerInfo {
         }
         for (String s : BAI_DU) {
             sTypeMap.put(s, Type.BAI_DU);
+        }
+
+        for (String s : NETEASE) {
+            sTypeMap.put(s, Type.NETEASE);
         }
 
     }
@@ -107,7 +117,8 @@ public class PackerInfo {
         AI_JIA_MI("爱加密"),
         BANG_BANG("梆梆加固"),
         TENCENT("腾讯加固"),
-        BAI_DU("百度加固");
+        BAI_DU("百度加固"),
+        NETEASE("易盾加固");
 
         String name;
 

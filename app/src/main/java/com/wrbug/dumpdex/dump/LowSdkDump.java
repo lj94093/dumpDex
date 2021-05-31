@@ -9,6 +9,8 @@ import com.wrbug.dumpdex.Native;
 import com.wrbug.dumpdex.PackerInfo;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashSet;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
@@ -22,6 +24,8 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
  * @since 2018/3/23
  */
 public class LowSdkDump {
+    private static int dumpClassCount=0;
+    private static HashSet<Object> cachedDex=new HashSet<>();
     public static void log(String txt) {
 
         XposedBridge.log("dumpdex.LowSdkDump-> " + txt);
@@ -46,10 +50,16 @@ public class LowSdkDump {
     }
 
     private static void dump(String packageName, Class<?> aClass) {
+//        获取Class对象的dexCache成员
         Object dexCache = XposedHelpers.getObjectField(aClass, "dexCache");
-        log("decCache=" + dexCache);
+//        log("decCache=" + dexCache);
         Object o = XposedHelpers.callMethod(dexCache, "getDex");
+        if(cachedDex.contains(o)){
+            return;
+        }
+        cachedDex.add(o);
         byte[] bytes = (byte[]) XposedHelpers.callMethod(o, "getBytes");
+//        Class.dexCache.getDex().getBytes()获取到对应的dex文件
         String path = "/data/data/" + packageName + "/dump";
         File file = new File(path, "source-" + bytes.length + ".dex");
         if (file.exists()) {
@@ -65,7 +75,10 @@ public class LowSdkDump {
         XposedHelpers.findAndHookMethod(ClassLoader.class, "loadClass", String.class, boolean.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                log("loadClass->" + param.args[0]);
+                dumpClassCount++;
+                if(dumpClassCount%1000==0){
+                    log("loadClass->" + param.args[0]+".Total class count:"+dumpClassCount);
+                }
                 Class result = (Class) param.getResult();
                 if (result != null) {
                     dump(lpparam.packageName, result);
@@ -75,9 +88,14 @@ public class LowSdkDump {
         XposedHelpers.findAndHookMethod("java.lang.ClassLoader", classLoader, "loadClass", String.class, boolean.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                log("loadClassWithclassLoader->" + param.args[0]);
+
+                dumpClassCount++;
+                if(dumpClassCount%1000==0){
+                    log("loadClassWithclassLoader->" + param.args[0]+".Total class count:"+dumpClassCount);
+                }
                 Class result = (Class) param.getResult();
                 if (result != null) {
+//                    获取到loadClass的返回值
                     dump(lpparam.packageName, result);
                 }
             }

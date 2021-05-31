@@ -41,6 +41,7 @@ public class XposedInit implements IXposedHookLoadPackage {
         }
         final String packageName = lpparam.packageName;
         if (lpparam.packageName.equals(packageName)) {
+            log("start to hook target package:"+packageName);
             String path = "/data/data/" + packageName + "/dump";
             File parent = new File(path);
             if (!parent.exists() || !parent.isDirectory()) {
@@ -50,6 +51,11 @@ public class XposedInit implements IXposedHookLoadPackage {
             if (DeviceUtils.isOreo() || DeviceUtils.isPie() || DeviceUtils.isAndroid10()) {
                 OreoDump.init(lpparam);
             } else {
+                PackerInfo.Type type = PackerInfo.find(lpparam);
+                if (type == null) {
+                    log("未识别到壳特征，不脱壳");
+                    return;
+                }
                 LowSdkDump.init(lpparam,type);
             }
 
