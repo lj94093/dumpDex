@@ -31,6 +31,22 @@ public class LowSdkDump {
         XposedBridge.log("dumpdex.LowSdkDump-> " + txt);
     }
 
+    public static String dumpStack(){
+        String stackContent="Dump Stack: ---------------start----------------";
+        Throwable ex = new Throwable();
+        StackTraceElement[] stackElements = ex.getStackTrace();
+
+        if (stackElements != null) {
+            for (int i = 0; i < stackElements.length; i++) {
+                stackContent+=String.format("\n\tat %s.%s-(%s)",stackElements[i].getClassName(),
+                        stackElements[i].getMethodName(),
+                        stackElements[i].getLineNumber());
+            }
+        }
+        stackContent+="\nDump Stack:  ---------------over----------------";
+        return stackContent;
+    }
+
     public static void init(final XC_LoadPackage.LoadPackageParam lpparam, PackerInfo.Type type) {
         log("start hook Instrumentation#newApplication");
         if (DeviceUtils.supportNativeHook()) {
@@ -54,21 +70,47 @@ public class LowSdkDump {
         Object dexCache = XposedHelpers.getObjectField(aClass, "dexCache");
 //        log("decCache=" + dexCache);
         Object o = XposedHelpers.callMethod(dexCache, "getDex");
+        String path = "/data/data/" + packageName + "/dump";
         if(cachedDex.contains(o)){
+            File dir=new File(path);
+            if(!dir.exists()){
+                cachedDex.clear();
+            }
             return;
         }
         cachedDex.add(o);
+        if(cachedDex.size()>100){
+            cachedDex.clear();
+        }
+        if(!isTargetDex()){
+            return;
+        }
         byte[] bytes = (byte[]) XposedHelpers.callMethod(o, "getBytes");
 //        Class.dexCache.getDex().getBytes()获取到对应的dex文件
-        String path = "/data/data/" + packageName + "/dump";
+
         File file = new File(path, "source-" + bytes.length + ".dex");
         if (file.exists()) {
             log(file.getName() + " exists");
             return;
+        }else {
+
+            FileUtils.writeByteToFile(bytes, file.getAbsolutePath());
         }
-        FileUtils.writeByteToFile(bytes, file.getAbsolutePath());
     }
 
+    private static boolean isTargetDex(){
+        //        只dump在Application中加载的类（这些才是被加壳保护的）
+        String stackContent=dumpStack();
+        if(!stackContent.contains("Application")){
+            return false;
+        }else{
+            if(!stackContent.contains("onCreate")&& !stackContent.contains("attachBaseContext")){
+                return false;
+            }
+        }
+        XposedBridge.log(stackContent);
+        return true;
+    }
 
     private static void attachBaseContextHook(final XC_LoadPackage.LoadPackageParam lpparam, final Application application) {
         ClassLoader classLoader = application.getClassLoader();
